@@ -124,13 +124,12 @@ public class NetCipherSampleActivity extends Activity {
         else if (pType == Proxy.Type.SOCKS)
         {
 
-            httpclient.useProxy(true, StrongHttpsClient.TYPE_SOCKS, proxyHost, proxyPort);
-
+            httpclient.useProxy(true, "SOCKS", proxyHost, proxyPort);
 
         }
         else if (pType == Proxy.Type.HTTP)
         {
-            httpclient.useProxy(true, StrongHttpsClient.TYPE_HTTP, proxyHost, proxyPort);
+            httpclient.useProxy(true, ConnRoutePNames.DEFAULT_PROXY, proxyHost, proxyPort);
 
         }
 

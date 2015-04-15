@@ -40,7 +40,7 @@ public class WebkitProxy {
     public static boolean setProxy(String appClass, Context ctx, String host, int port) throws Exception
     {
       
-    	//setSystemProperties(host, port);
+    	setSystemProperties(host, port);
 
         boolean worked = false;
 
@@ -52,17 +52,16 @@ public class WebkitProxy {
         {
             worked = setWebkitProxyICS(ctx, host, port);
         }
-        else if (Build.VERSION.SDK_INT < 20)
+        else        	
         {
+           // worked = setKitKatProxy0(ctx, host, port);
+          //  worked = setWebkitProxyICS(ctx, host, port);
+
             worked = setKitKatProxy(appClass, ctx, host, port);
-        
-            if (!worked) //some kitkat's still use ICS browser component (like Cyanogen 11)
-            	worked = setWebkitProxyICS(ctx, host, port);
             
-        }
-        else
-        {
-        	worked = setWebkitProxyLollipop(ctx, host, port);
+         //   worked = setKitKatProxy2(ctx, host, port);
+            
+          //  sendProxyChangedIntent(ctx, host, port);
             
         }
         
@@ -179,21 +178,16 @@ public class WebkitProxy {
     @TargetApi(19)
 	public static boolean resetKitKatProxy(String appClass, Context appContext) {
     
-    	return setKitKatProxy(appClass, appContext,null,0);
+    	return setKitKatProxy(appClass, appContext,"",0);
     }
     
     @TargetApi(19)
-	private static boolean setKitKatProxy(String appClass, Context appContext, String host, int port) {
+	public static boolean setKitKatProxy(String appClass, Context appContext, String host, int port) {
     	//Context appContext = webView.getContext().getApplicationContext();
-    	
-    	if (host != null)
-    	{
-	        System.setProperty("http.proxyHost", host);
-	        System.setProperty("http.proxyPort", port + "");
-	        System.setProperty("https.proxyHost", host);
-	        System.setProperty("https.proxyPort", port + "");
-    	}
-        
+        System.setProperty("http.proxyHost", host);
+        System.setProperty("http.proxyPort", port + "");
+        System.setProperty("https.proxyHost", host);
+        System.setProperty("https.proxyPort", port + "");
         try {
             Class applictionCls = Class.forName(appClass);
             Field loadedApkField = applictionCls.getField("mLoadedApk");
@@ -209,18 +203,15 @@ public class WebkitProxy {
                     if (clazz.getName().contains("ProxyChangeListener")) {
                         Method onReceiveMethod = clazz.getDeclaredMethod("onReceive", Context.class, Intent.class);
                         Intent intent = new Intent(Proxy.PROXY_CHANGE_ACTION);
-                        
-                        if (host != null)
-                        {
-	                        /*********** optional, may be need in future *************/
-	                        final String CLASS_NAME = "android.net.ProxyProperties";
-	                        Class cls = Class.forName(CLASS_NAME);
-	                        Constructor constructor = cls.getConstructor(String.class, Integer.TYPE, String.class);
-	                        constructor.setAccessible(true);
-	                        Object proxyProperties = constructor.newInstance(host, port, null);
-	                        intent.putExtra("proxy", (Parcelable) proxyProperties);
-	                        /*********** optional, may be need in future *************/
-                        }
+
+                        /*********** optional, may be need in future *************/
+                        final String CLASS_NAME = "android.net.ProxyProperties";
+                        Class cls = Class.forName(CLASS_NAME);
+                        Constructor constructor = cls.getConstructor(String.class, Integer.TYPE, String.class);
+                        constructor.setAccessible(true);
+                        Object proxyProperties = constructor.newInstance(host, port, null);
+                        intent.putExtra("proxy", (Parcelable) proxyProperties);
+                        /*********** optional, may be need in future *************/
 
                         onReceiveMethod.invoke(rec, appContext, intent);
                     }
@@ -271,68 +262,6 @@ public class WebkitProxy {
             Log.v(TAG, exceptionAsString);
         }
         return false;    }
-    
-    @TargetApi(21)
-	public static boolean resetLollipopProxy(String appClass, Context appContext) {
-    
-    	return setWebkitProxyLollipop(appContext,null,0);
-    }
-    
- // http://stackanswers.com/questions/25272393/android-webview-set-proxy-programmatically-on-android-l
-    @TargetApi(21) // for android.util.ArrayMap methods
-    @SuppressWarnings("rawtypes")
-    private static boolean setWebkitProxyLollipop(Context appContext, String host, int port)
-    {
-        System.setProperty("http.proxyHost", host);
-        System.setProperty("http.proxyPort", port + "");
-        System.setProperty("https.proxyHost", host);
-        System.setProperty("https.proxyPort", port + "");
-        try {
-            Class applictionClass = Class.forName("android.app.Application");
-            Field mLoadedApkField = applictionClass.getDeclaredField("mLoadedApk");
-            mLoadedApkField.setAccessible(true);
-            Object mloadedApk = mLoadedApkField.get(appContext);
-            Class loadedApkClass = Class.forName("android.app.LoadedApk");
-            Field mReceiversField = loadedApkClass.getDeclaredField("mReceivers");
-            mReceiversField.setAccessible(true);
-            ArrayMap receivers = (ArrayMap) mReceiversField.get(mloadedApk);
-            for (Object receiverMap : receivers.values())
-            {
-                for (Object receiver : ((ArrayMap) receiverMap).keySet())
-                {
-                    Class clazz = receiver.getClass();
-                    if (clazz.getName().contains("ProxyChangeListener"))
-                    {
-                        Method onReceiveMethod = clazz.getDeclaredMethod("onReceive", Context.class, Intent.class);
-                        Intent intent = new Intent(Proxy.PROXY_CHANGE_ACTION);
-                        onReceiveMethod.invoke(receiver, appContext, intent);
-                    }
-                }
-            }
-            return true;
-        }
-        catch (ClassNotFoundException e)
-        {
-            Log.d("ProxySettings","Exception setting WebKit proxy on Lollipop through ProxyChangeListener: " + e.toString());
-        }
-        catch (NoSuchFieldException e)
-        {
-            Log.d("ProxySettings","Exception setting WebKit proxy on Lollipop through ProxyChangeListener: " + e.toString());
-        }
-        catch (IllegalAccessException e)
-        {
-            Log.d("ProxySettings","Exception setting WebKit proxy on Lollipop through ProxyChangeListener: " + e.toString());
-        }
-        catch (NoSuchMethodException e)
-        {
-            Log.d("ProxySettings","Exception setting WebKit proxy on Lollipop through ProxyChangeListener: " + e.toString());
-        }
-        catch (InvocationTargetException e)
-        {
-            Log.d("ProxySettings","Exception setting WebKit proxy on Lollipop through ProxyChangeListener: " + e.toString());
-        }
-        return false;
-     }
     
     private static boolean sendProxyChangedIntent(Context ctx, String host, int port) 
     {
@@ -548,14 +477,6 @@ public class WebkitProxy {
     }**/
 
     public static void resetProxy(String appClass, Context ctx) throws Exception {
-    	
-
-        System.clearProperty("http.proxyHost");
-        System.clearProperty("http.proxyPort");
-        System.clearProperty("https.proxyHost");
-        System.clearProperty("https.proxyPort");
-        
-        
          if (Build.VERSION.SDK_INT < 14)
         {
             resetProxyForGingerBread(ctx);
@@ -568,7 +489,6 @@ public class WebkitProxy {
         {
         	resetKitKatProxy(appClass, ctx);
         }
-         
     }
 
     private static void resetProxyForICS() throws Exception{

@@ -1,31 +1,28 @@
 
 package info.guardianproject.onionkit.trust;
 
+import android.content.Context;
+import android.util.Log;
+import ch.boye.httpclientandroidlib.HttpHost;
+import ch.boye.httpclientandroidlib.conn.ClientConnectionOperator;
+import ch.boye.httpclientandroidlib.conn.scheme.PlainSocketFactory;
+import ch.boye.httpclientandroidlib.conn.scheme.Scheme;
+import ch.boye.httpclientandroidlib.conn.scheme.SchemeRegistry;
+import ch.boye.httpclientandroidlib.impl.client.DefaultHttpClient;
+import ch.boye.httpclientandroidlib.impl.conn.tsccm.ThreadSafeClientConnManager;
 import info.guardianproject.onionkit.R;
 import info.guardianproject.onionkit.proxy.MyThreadSafeClientConnManager;
 import info.guardianproject.onionkit.proxy.SocksProxyClientConnOperator;
 
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
-
-import android.content.Context;
-import android.util.Log;
-import ch.boye.httpclientandroidlib.HttpHost;
-import ch.boye.httpclientandroidlib.conn.ClientConnectionOperator;
-import ch.boye.httpclientandroidlib.conn.params.ConnRoutePNames;
-import ch.boye.httpclientandroidlib.conn.scheme.PlainSocketFactory;
-import ch.boye.httpclientandroidlib.conn.scheme.Scheme;
-import ch.boye.httpclientandroidlib.conn.scheme.SchemeRegistry;
-import ch.boye.httpclientandroidlib.impl.client.DefaultHttpClient;
-import ch.boye.httpclientandroidlib.impl.conn.tsccm.ThreadSafeClientConnManager;
 
 public class StrongHttpsClient extends DefaultHttpClient {
 
@@ -45,7 +42,7 @@ public class StrongHttpsClient extends DefaultHttpClient {
 
         mRegistry = new SchemeRegistry();
         mRegistry.register(
-                new Scheme(TYPE_HTTP, 80, PlainSocketFactory.getSocketFactory()));
+                new Scheme("http", 80, PlainSocketFactory.getSocketFactory()));
 
         
         try {
@@ -82,7 +79,7 @@ public class StrongHttpsClient extends DefaultHttpClient {
 
         mRegistry = new SchemeRegistry();
         mRegistry.register(
-                new Scheme(TYPE_HTTP, 80, PlainSocketFactory.getSocketFactory()));
+                new Scheme("http", 80, PlainSocketFactory.getSocketFactory()));
 
         try {
             //mTrustManager = new StrongTrustManager(context, keystore);
@@ -142,33 +139,27 @@ public class StrongHttpsClient extends DefaultHttpClient {
 
     public void useProxy(boolean enableTor, String type, String host, int port)
     {
+
+        if (proxyType != null)
+        {
+            getParams().removeParameter(proxyType);
+            proxyHost = null;
+        }
+
         if (enableTor)
         {
             this.proxyType = type;
 
-            HttpHost proxyHost = new HttpHost(host, port, type);
-            getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxyHost);
-            
-            if (type.equalsIgnoreCase(TYPE_SOCKS))
+            HttpHost proxyHost = new HttpHost(host, port);
+            getParams().setParameter(type, proxyHost);
+
+            if (type.equalsIgnoreCase("socks"))
             {
                 this.proxyHost = proxyHost;
             }
         }
-        else
-        {
-        	getParams().removeParameter(ConnRoutePNames.DEFAULT_PROXY);
-            proxyHost = null;
-        }
 
     }
   
-    public void disableProxy ()
-    {
-    	getParams().removeParameter(ConnRoutePNames.DEFAULT_PROXY);
-        proxyHost = null;
-    }
   
-    public final static String TYPE_SOCKS = "socks";
-    public final static String TYPE_HTTP = "http";
-    
 }

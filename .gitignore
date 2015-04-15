@@ -20,10 +20,3 @@ gen/
 
 # Local configuration file (sdk path, etc)
 local.properties
-
-# Gradle
-build
-.gradle
-
-# IntelliJ / Android Studio
-*iml
